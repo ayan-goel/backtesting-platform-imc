@@ -6,7 +6,6 @@ from pathlib import Path
 
 import numpy as np
 
-from engine.market.loader import MarketData
 from engine.matching.imc_matcher import ImcMatcher
 from engine.montecarlo.runner import (
     McPathResult,
@@ -15,7 +14,6 @@ from engine.montecarlo.runner import (
 )
 from engine.simulator.runner import RunConfig, simulate_day
 from engine.simulator.strategy_loader import hash_strategy_file, load_trader
-
 from tests.engine._mc_fixtures import (
     GREEDY_TRADER_SRC,
     NOOP_TRADER_SRC,

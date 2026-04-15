@@ -18,7 +18,6 @@ from fastapi import FastAPI
 from server.schemas.mc import McCreateRequest
 from server.services import mc_runner, mc_service
 from server.settings import get_settings
-
 from tests.server._mc_csv_fixtures import dataset_doc_for, write_synthetic_csvs
 
 GREEDY_TRADER = b"""

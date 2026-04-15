@@ -31,7 +31,7 @@ from typing import Any
 import numpy as np
 
 from engine.datamodel import adapters
-from engine.datamodel.types import Fill, Order, Trade
+from engine.datamodel.types import Order, Trade
 from engine.errors import SimulationError
 from engine.market.loader import MarketData
 from engine.market.snapshot import build_trading_state
@@ -287,4 +287,4 @@ def _verify_limits(positions: dict[str, int], config: RunConfig) -> None:
             )
 
 
-__all__ = ["McPathResult", "simulate_day_mc", "downsample_curve"]
+__all__ = ["McPathResult", "downsample_curve", "simulate_day_mc"]

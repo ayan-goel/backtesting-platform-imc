@@ -30,12 +30,6 @@ from typing import Any
 
 import structlog
 
-# Guards load_trader against concurrent sys.modules mutation. The loader
-# temporarily registers synthetic "strategies" / "strategies.datamodel"
-# entries while importing — two threads racing that setup can end up
-# with one thread's registrations visible to the other's import.
-_STRATEGY_LOAD_LOCK = threading.Lock()
-
 from engine.market.loader import MarketData, load_round_day
 from engine.matching.factory import resolve_matcher
 from engine.montecarlo.builder import build_synthetic_market_data
@@ -47,6 +41,12 @@ from server.services import dataset_service, strategy_service
 from server.services.mc_path_runner import PathResult, run_mc_path
 from server.settings import Settings
 from server.storage import mc_artifacts, registry
+
+# Guards load_trader against concurrent sys.modules mutation. The loader
+# temporarily registers synthetic "strategies" / "strategies.datamodel"
+# entries while importing — two threads racing that setup can end up
+# with one thread's registrations visible to the other's import.
+_STRATEGY_LOAD_LOCK = threading.Lock()
 
 log = structlog.get_logger(__name__)
 

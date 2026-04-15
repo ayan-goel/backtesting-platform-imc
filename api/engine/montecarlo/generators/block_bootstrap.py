@@ -32,7 +32,7 @@ class BlockBootstrapGenerator:
         self,
         *,
         historical: MarketData,
-        calibration: Any | None = None,  # noqa: ARG002
+        calibration: Any | None = None,
         params: Mapping[str, Any] | None = None,
         rng: np.random.Generator,
     ) -> MarketData:

@@ -29,7 +29,7 @@ def synthesize_snap(
     rng: np.random.Generator,
 ) -> ProductSnap:
     """Build one ProductSnap with a synthesized book + market trades."""
-    mid_int = int(round(mid))
+    mid_int = round(mid)
     spread = _sample_spread(calibration, rng)
     half = max(1, spread // 2)
     bid1 = mid_int - half
@@ -68,7 +68,7 @@ def _sample_spread(cal: ProductCalibration, rng: np.random.Generator) -> int:
     if samples.size == 0:
         return 2
     idx = int(rng.integers(0, samples.size))
-    return max(1, int(round(float(samples[idx]))))
+    return max(1, round(float(samples[idx])))
 
 
 def _sample_depth(

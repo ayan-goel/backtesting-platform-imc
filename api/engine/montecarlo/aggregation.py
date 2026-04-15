@@ -4,7 +4,7 @@ Produces the `aggregate` subdoc stored on the parent mc doc:
 - headline pnl stats (mean, median, std, min, max)
 - quantiles: p01..p99
 - winrate, cross-path sharpe
-- pnl histogram (30 bins, edges anchored to [p01, p99] ∪ [min, max])
+- pnl histogram (30 bins, edges anchored to [p01, p99] or [min, max])
 - curve quantile bands for the fan chart (p05/p25/p50/p75/p95)
 - max-drawdown + fill-count summary stats
 
@@ -51,7 +51,8 @@ def aggregate(paths: list[PathMetricView]) -> dict[str, Any]:
     quantile_qs = (0.01, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99)
     quantile_values = np.quantile(pnls, quantile_qs)
     pnl_quantiles = {
-        label: float(v) for label, v in zip(quantile_labels, quantile_values)
+        label: float(v)
+        for label, v in zip(quantile_labels, quantile_values, strict=True)
     }
 
     winrate = float((pnls > 0).mean())
@@ -129,4 +130,4 @@ def _curve_quantiles(paths: list[PathMetricView]) -> dict[str, Any] | None:
     }
 
 
-__all__ = ["HISTOGRAM_BINS", "CURVE_QUANTILE_LEN", "PathMetricView", "aggregate"]
+__all__ = ["CURVE_QUANTILE_LEN", "HISTOGRAM_BINS", "PathMetricView", "aggregate"]

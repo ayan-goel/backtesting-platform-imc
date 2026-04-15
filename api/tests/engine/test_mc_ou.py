@@ -10,7 +10,6 @@ from engine.montecarlo.builder import build_synthetic_market_data
 from engine.montecarlo.calibration import calibrate
 from engine.montecarlo.generators.ou import OuGenerator
 from engine.montecarlo.rng import rng_for_path
-
 from tests.engine._mc_fixtures import make_synthetic_market_data
 
 
@@ -20,7 +19,7 @@ def _mean_reverting_md(*, mu: float = 500.0, phi: float = 0.8, n: int = 4000) ->
     mids: list[int] = []
     for _ in range(n):
         price = phi * price + (1 - phi) * mu + float(rng.standard_normal()) * 1.5
-        mids.append(int(round(price)))
+        mids.append(round(price))
     timestamps = tuple(i * 100 for i in range(n))
     frames: dict[int, dict[str, ProductSnap]] = {}
     for i, ts in enumerate(timestamps):

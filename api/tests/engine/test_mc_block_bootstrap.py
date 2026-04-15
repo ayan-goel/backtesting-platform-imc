@@ -7,7 +7,6 @@ import numpy as np
 from engine.montecarlo.builder import build_synthetic_market_data
 from engine.montecarlo.generators.block_bootstrap import BlockBootstrapGenerator
 from engine.montecarlo.rng import rng_for_path
-
 from tests.engine._mc_fixtures import make_synthetic_market_data
 
 

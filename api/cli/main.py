@@ -422,6 +422,162 @@ def study(
         raise typer.Exit(code=2)
 
 
+@app.command()
+def mc(
+    strategy: str = typer.Option(..., "--strategy", "-s", help="Uploaded strategy id."),
+    round_num: int = typer.Option(..., "--round", "-r"),
+    day: int = typer.Option(..., "--day", "-d"),
+    generator: str = typer.Option(
+        "block_bootstrap",
+        "--generator",
+        help="Generator type: identity, block_bootstrap, gbm, ou.",
+    ),
+    block_size: int = typer.Option(50, "--block-size"),
+    n_paths: int = typer.Option(100, "--n-paths"),
+    seed: int = typer.Option(42, "--seed"),
+    num_workers: int = typer.Option(2, "--workers"),
+    matcher: str = typer.Option("imc", "--matcher"),
+    position_limit: int = typer.Option(50, "--limit"),
+    poll_seconds: float = typer.Option(2.0, "--poll"),
+) -> None:
+    """Submit an MC simulation via POST /mc, poll until terminal, print distribution."""
+    if generator not in {"identity", "block_bootstrap", "gbm", "ou"}:
+        raise typer.BadParameter(
+            "--generator must be one of identity, block_bootstrap, gbm, ou"
+        )
+    gen_spec: dict[str, Any] = {"type": generator}
+    if generator == "block_bootstrap":
+        gen_spec["block_size"] = block_size
+
+    body = {
+        "strategy_id": strategy,
+        "round": round_num,
+        "day": day,
+        "matcher": matcher,
+        "position_limit": position_limit,
+        "generator": gen_spec,
+        "n_paths": n_paths,
+        "seed": seed,
+        "num_workers": num_workers,
+    }
+
+    try:
+        client = api_client.build_client(timeout=120.0)
+    except api_client.MissingApiKeyError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    with client:
+        try:
+            post = client.post("/mc", json=body)
+        except httpx.HTTPError as e:
+            console.print(f"[red]POST /mc failed[/red]: {e}")
+            raise typer.Exit(code=2) from e
+        if post.status_code != 201:
+            console.print(f"[red]POST /mc failed[/red]: {post.status_code} {post.text}")
+            raise typer.Exit(code=2)
+        doc = post.json()
+        mc_id = doc["_id"]
+        console.print(f"[green]submitted[/green]: {mc_id}")
+
+        final = _poll_until_terminal(
+            client,
+            path=f"/mc/{mc_id}",
+            terminal={"succeeded", "failed", "cancelled"},
+            poll_seconds=poll_seconds,
+        )
+
+    _print_mc_summary(final)
+    if final.get("status") == "failed":
+        raise typer.Exit(code=2)
+
+
+@app.command("mc-show")
+def mc_show(
+    mc_id: str = typer.Argument(..., help="MC simulation id."),
+) -> None:
+    """Fetch and print a completed MC simulation's aggregate stats."""
+    try:
+        client = api_client.build_client()
+    except api_client.MissingApiKeyError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1) from e
+    with client:
+        r = client.get(f"/mc/{mc_id}")
+        if r.status_code != 200:
+            console.print(f"[red]GET /mc/{mc_id} failed[/red]: {r.status_code}")
+            raise typer.Exit(code=2)
+        _print_mc_summary(r.json())
+
+
+@app.command("mc-list")
+def mc_list() -> None:
+    """List MC simulations."""
+    try:
+        client = api_client.build_client()
+    except api_client.MissingApiKeyError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1) from e
+    with client:
+        r = client.get("/mc")
+        if r.status_code != 200:
+            console.print(f"[red]GET /mc failed[/red]: {r.status_code}")
+            raise typer.Exit(code=2)
+        docs = r.json()
+    table = Table(title="mc simulations", show_header=True)
+    table.add_column("id")
+    table.add_column("strategy")
+    table.add_column("r/d")
+    table.add_column("generator")
+    table.add_column("paths", justify="right")
+    table.add_column("status")
+    table.add_column("mean pnl", justify="right")
+    for d in docs:
+        agg = d.get("aggregate") or {}
+        mean = agg.get("pnl_mean")
+        table.add_row(
+            d.get("_id", "?"),
+            d.get("strategy_filename", "?"),
+            f"r{d.get('round')}/d{d.get('day')}",
+            (d.get("generator") or {}).get("type", "?"),
+            str(d.get("n_paths", "?")),
+            d.get("status", "?"),
+            f"{mean:.2f}" if isinstance(mean, (int, float)) else "—",
+        )
+    console.print(table)
+
+
+def _print_mc_summary(doc: dict[str, Any]) -> None:
+    status = doc.get("status", "?")
+    progress = doc.get("progress", {})
+    console.print(
+        f"[bold]status[/bold]: {status} "
+        f"· {progress.get('completed', 0)}/{progress.get('total', 0)} paths"
+        f" · {progress.get('failed', 0)} failed"
+    )
+
+    agg = doc.get("aggregate")
+    if not agg:
+        console.print("[yellow]no aggregate stats[/yellow]")
+        return
+    table = Table(title="distribution", show_header=True)
+    table.add_column("field")
+    table.add_column("value", justify="right")
+    table.add_row("mean", f"{agg.get('pnl_mean', 0):.2f}")
+    table.add_row("median", f"{agg.get('pnl_median', 0):.2f}")
+    table.add_row("std", f"{agg.get('pnl_std', 0):.2f}")
+    table.add_row("min", f"{agg.get('pnl_min', 0):.2f}")
+    table.add_row("max", f"{agg.get('pnl_max', 0):.2f}")
+    table.add_row("winrate", f"{agg.get('winrate', 0) * 100:.1f}%")
+    table.add_row("sharpe", f"{agg.get('sharpe_across_paths', 0):.2f}")
+    q = agg.get("pnl_quantiles") or {}
+    for label in ("p05", "p25", "p50", "p75", "p95"):
+        val = q.get(label)
+        if val is not None:
+            table.add_row(label, f"{val:.2f}")
+    console.print(table)
+
+
 def _print_study_summary(study_doc: dict[str, Any]) -> None:
     status = study_doc.get("status", "?")
     progress = study_doc.get("progress", {})

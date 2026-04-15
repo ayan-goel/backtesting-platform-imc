@@ -81,9 +81,8 @@ class GbmGenerator:
 
 
 def _pick_start_price(cal: ProductCalibration, source: str) -> float:
-    if source == "historical_last":
-        if cal.mid_level_last > 0:
-            return cal.mid_level_last
+    if source == "historical_last" and cal.mid_level_last > 0:
+        return cal.mid_level_last
     if cal.mid_level_first > 0:
         return cal.mid_level_first
     if cal.mid_level_mean > 0:

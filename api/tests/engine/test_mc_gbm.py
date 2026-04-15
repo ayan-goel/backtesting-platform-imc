@@ -12,7 +12,6 @@ from engine.montecarlo.builder import build_synthetic_market_data
 from engine.montecarlo.calibration import calibrate
 from engine.montecarlo.generators.gbm import GbmGenerator
 from engine.montecarlo.rng import rng_for_path
-
 from tests.engine._mc_fixtures import make_synthetic_market_data
 
 
@@ -24,7 +23,7 @@ def _drifting_md(
     mids: list[int] = []
     for _ in range(n):
         log_price += mu + sigma * float(rng.standard_normal())
-        mids.append(int(round(math.exp(log_price))))
+        mids.append(round(math.exp(log_price)))
     timestamps = tuple(i * 100 for i in range(n))
     frames: dict[int, dict[str, ProductSnap]] = {}
     for i, ts in enumerate(timestamps):
@@ -115,10 +114,7 @@ def test_gbm_recovers_volatility_on_long_path() -> None:
 
 
 def test_gbm_zero_volatility_is_constant() -> None:
-    md = make_synthetic_market_data(num_timestamps=40)
-    cal = calibrate(md)
-    # Force zero log-return std by overriding via a new Calibration built from
-    # a constant-mid series. Simpler: use a flat synthetic MD.
+    # Force zero log-return std by using a flat-mid series.
     timestamps = tuple(i * 100 for i in range(30))
     frames: dict[int, dict[str, ProductSnap]] = {}
     for ts in timestamps:

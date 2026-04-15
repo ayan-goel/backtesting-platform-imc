@@ -250,6 +250,41 @@ async def test_mc_identity_runs_end_to_end(
 
 @pytest.mark.parametrize("mc_strategy", [GREEDY_TRADER], indirect=True)
 @pytest.mark.asyncio
+async def test_mc_aggregate_populates_on_completion(
+    test_app: FastAPI,
+    mc_worker_state: mc_runner.McWorkersState,
+    mc_dataset: dict,
+    mc_strategy: dict,
+) -> None:
+    db = test_app.state.mongo_db
+    settings = get_settings()
+    doc = await mc_service.create_mc_simulation(
+        req=McCreateRequest(
+            strategy_id=mc_strategy["_id"],
+            round=0,
+            day=0,
+            n_paths=4,
+            seed=99,
+            generator={"type": "block_bootstrap", "block_size": 8},
+        ),
+        settings=settings,
+        db=db,
+    )
+    mc_runner.signal_new_mc_work(mc_worker_state)
+    final = await _wait_until(
+        lambda d: d.get("status") in {"succeeded", "failed"}, db, doc["_id"]
+    )
+    assert final["status"] == "succeeded", final
+    agg = final["aggregate"]
+    assert agg is not None
+    assert "pnl_mean" in agg
+    assert len(agg["pnl_histogram"]["counts"]) > 0
+    assert agg["pnl_curve_quantiles"] is not None
+    assert len(agg["pnl_curve_quantiles"]["p50"]) > 0
+
+
+@pytest.mark.parametrize("mc_strategy", [GREEDY_TRADER], indirect=True)
+@pytest.mark.asyncio
 async def test_mc_writes_path_curves_to_disk(
     test_app: FastAPI,
     mc_worker_state: mc_runner.McWorkersState,

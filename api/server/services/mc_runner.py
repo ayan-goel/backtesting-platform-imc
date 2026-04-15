@@ -145,9 +145,8 @@ async def _execute_mc(
         return
 
     try:
-        historical = load_round_day(
-            doc["round"], doc["day"], dataset_service.dataset_root_for(settings)
-        )
+        datasets_dir = dataset_service.ensure_dataset_on_disk(settings, dataset)
+        historical = load_round_day(doc["round"], doc["day"], datasets_dir)
     except Exception as e:
         await _fail_mc(db, mc_id, f"failed to load market data: {e}")
         return

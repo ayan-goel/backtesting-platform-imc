@@ -120,6 +120,12 @@ async def upload_datasets(
             "trades_filename": trades_path.name,
             "prices_bytes": len(prices.content),
             "trades_bytes": len(trades.content),
+            # Persist the raw CSV bytes so datasets survive ephemeral-
+            # filesystem restarts (Heroku/Railway wipe /app/storage on every
+            # boot). ensure_dataset_on_disk rehydrates from this when the
+            # files are missing at read time.
+            "prices_content": prices.content,
+            "trades_content": trades.content,
         }
         await registry.upsert_dataset(db, doc)
         uploaded.append(doc)
@@ -202,3 +208,52 @@ async def delete_dataset(
 def dataset_root_for(settings: Settings) -> Path:
     """Directory passed as `data_root` to `load_round_day` at run time."""
     return settings.datasets_dir.resolve()
+
+
+def ensure_dataset_on_disk(settings: Settings, doc: dict[str, Any]) -> Path:
+    """Return the dataset directory, rehydrating CSVs from Mongo if wiped.
+
+    Mirrors `strategy_service.ensure_strategy_on_disk`: on ephemeral
+    filesystems the uploaded CSVs disappear on every restart, but the
+    Mongo doc persists along with the raw content bytes. When the files
+    are missing, write them back to disk from `prices_content` /
+    `trades_content` before handing the path to `load_round_day`.
+
+    Raises InvalidMarketDataError if the files are missing *and* the
+    Mongo doc predates the backfill (no `prices_content` field).
+    """
+    datasets_dir = dataset_root_for(settings)
+    datasets_dir.mkdir(parents=True, exist_ok=True)
+    prices_name = doc.get("prices_filename")
+    trades_name = doc.get("trades_filename")
+    if not prices_name or not trades_name:
+        raise InvalidMarketDataError(
+            f"dataset doc {doc.get('_id')!r} is missing filename fields"
+        )
+
+    prices_path = datasets_dir / prices_name
+    trades_path = datasets_dir / trades_name
+    missing = [p for p in (prices_path, trades_path) if not p.is_file()]
+    if not missing:
+        return datasets_dir
+
+    prices_content = doc.get("prices_content")
+    trades_content = doc.get("trades_content")
+    if prices_content is None or trades_content is None:
+        raise InvalidMarketDataError(
+            f"dataset {doc.get('_id')!r} files are missing on disk and the "
+            "Mongo doc has no cached content. Re-upload the dataset via "
+            "POST /datasets."
+        )
+
+    def _coerce(raw: object, label: str) -> bytes:
+        if isinstance(raw, bytes | bytearray | memoryview):
+            return bytes(raw)
+        raise InvalidMarketDataError(
+            f"cached {label} has unsupported type {type(raw).__name__}; "
+            "re-upload the dataset"
+        )
+
+    prices_path.write_bytes(_coerce(prices_content, "prices_content"))
+    trades_path.write_bytes(_coerce(trades_content, "trades_content"))
+    return datasets_dir

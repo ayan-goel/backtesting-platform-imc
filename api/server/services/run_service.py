@@ -74,7 +74,8 @@ async def execute_run(
             return existing
 
     trader = load_trader(strategy_path)
-    md = load_round_day(req.round, req.day, dataset_service.dataset_root_for(settings))
+    datasets_dir = dataset_service.ensure_dataset_on_disk(settings, dataset)
+    md = load_round_day(req.round, req.day, datasets_dir)
 
     run_id = _build_run_id(strategy_doc["stem"], req.round, req.day, req.trial_number)
     output_dir = (settings.storage_root / "runs" / run_id).resolve()

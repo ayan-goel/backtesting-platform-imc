@@ -77,6 +77,10 @@ def test_simulate_day_mc_captures_curve_length(tmp_path: Path) -> None:
 
 
 def test_simulate_day_mc_curve_final_matches_pnl_total(tmp_path: Path) -> None:
+    """Strict invariant: curve[-1] must equal summary.pnl_total. If this
+    regresses, the fan chart describes a different quantity than the
+    headline mean pnl — the exact bug reported in production.
+    """
     md = make_synthetic_market_data(num_timestamps=60)
     strategy = _write(tmp_path, GREEDY_TRADER_SRC)
     result = simulate_day_mc(
@@ -85,11 +89,11 @@ def test_simulate_day_mc_curve_final_matches_pnl_total(tmp_path: Path) -> None:
         matcher=ImcMatcher(),
         config=_config(tmp_path, "greedy", strategy),
     )
-    # Curve records mark-to-market during the loop and the summary includes
-    # the final revaluation at the last-ts mid. Without closing positions they
-    # may differ slightly — here we only assert the curve is finite.
-    assert np.all(np.isfinite(result.pnl_curve))
     assert isinstance(result, McPathResult)
+    assert np.all(np.isfinite(result.pnl_curve))
+    assert abs(float(result.pnl_curve[-1]) - result.summary.pnl_total) <= max(
+        1.0, abs(result.summary.pnl_total) * 1e-6
+    )
 
 
 def test_downsample_curve_preserves_endpoints() -> None:

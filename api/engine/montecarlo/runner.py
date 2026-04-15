@@ -155,10 +155,19 @@ def simulate_day_mc(
             )
         own_trades_by_product = {k: tuple(v) for k, v in new_own_trades.items()}
 
-        mid_prices = {
-            p: engine_state.order_depths[p].mid_price() or state.vwap_cost.get(p, 0.0)
-            for p in engine_state.order_depths
-        }
+        # Use the CSV-column mid for mark-to-market so the intraday curve
+        # tracks the same quantity the end-of-day summary reports. Falling
+        # back to OrderDepth.mid_price() only when the CSV mid is missing
+        # means the curve is consistent with pnl_total even on datasets
+        # where the two sources disagree.
+        frame = market_data.frames[ts]
+        mid_prices: dict[str, float] = {}
+        for p in engine_state.order_depths:
+            snap_mid = frame[p].mid_price if p in frame else None
+            if snap_mid is None or snap_mid == 0.0:
+                computed = engine_state.order_depths[p].mid_price()
+                snap_mid = computed if computed is not None else state.vwap_cost.get(p, 0.0)
+            mid_prices[p] = float(snap_mid)
 
         cash = state.cash
         positions_value = sum(
@@ -195,6 +204,43 @@ def simulate_day_mc(
         turnover_by_product[product] = stats.turnover
 
     pnl_total = sum(pnl_by_product.values())
+
+    # Invariant: the final intraday mark-to-market must agree with the
+    # summary pnl. If this ever breaks, the curve we ship to the fan chart
+    # describes a different quantity than the headline stats — exactly the
+    # symptom "mean pnl 560k but fan chart maxes at 1.5k" users have hit.
+    # We rebuild curve[-1] from the same mid_prices the summary uses so
+    # the diagnostic is meaningful (mid source drift is a real divergence,
+    # not a false alarm).
+    final_mid_prices: dict[str, float] = {}
+    for p in market_data.products:
+        if p not in last_snap:
+            continue
+        snap_mid = last_snap[p].mid_price
+        if snap_mid is None or snap_mid == 0.0:
+            final_mid_prices[p] = float(state.vwap_cost.get(p, 0.0))
+        else:
+            final_mid_prices[p] = float(snap_mid)
+    final_mark = state.cash + sum(
+        pos * final_mid_prices.get(sym, 0.0)
+        for sym, pos in state.positions.items()
+    )
+    drift = final_mark - pnl_total
+    if abs(drift) > max(1.0, abs(pnl_total) * 1e-6):
+        raise SimulationError(
+            "mc pnl invariant broken: "
+            f"state.cash={state.cash:.2f} + positions_value={final_mark - state.cash:.2f} "
+            f"= {final_mark:.2f} but summary.pnl_total={pnl_total:.2f} "
+            f"(drift={drift:.2f}). "
+            f"positions={dict(state.positions)} vwap={dict(state.vwap_cost)} "
+            f"realized={dict(state.realized_pnl_by_product)} "
+            f"last_mids={final_mid_prices}"
+        )
+    # Also overwrite the last-ts curve entry so the fan chart line tracks
+    # the summary-reported mid (which may differ from the in-loop
+    # OrderDepth.mid_price() by a tick, e.g. when the CSV mid is the
+    # pre-book-update print).
+    pnl_curve[-1] = final_mark
 
     summary = build_summary(
         run_id=config.run_id,

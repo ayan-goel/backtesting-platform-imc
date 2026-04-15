@@ -16,7 +16,7 @@ All generators are dispatched from `resolve_generator(spec)` keyed on
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Protocol
+from typing import Any, ClassVar, Protocol
 
 import numpy as np
 
@@ -25,14 +25,14 @@ from engine.montecarlo.generators.identity import IdentityGenerator
 
 
 class Generator(Protocol):
-    name: str
+    name: ClassVar[str]
 
     def generate(
         self,
         *,
         historical: MarketData,
-        calibration: Any | None,
-        params: Mapping[str, Any],
+        calibration: Any,
+        params: Mapping[str, Any] | None,
         rng: np.random.Generator,
     ) -> MarketData: ...
 

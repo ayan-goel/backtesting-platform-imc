@@ -77,7 +77,8 @@ def _sample_depth(
     if samples.shape[0] == 0:
         return np.asarray([10, 6, 3], dtype=np.int64)
     idx = int(rng.integers(0, samples.shape[0]))
-    return samples[idx]
+    row: np.ndarray = samples[idx]
+    return row
 
 
 def _sample_market_trades(

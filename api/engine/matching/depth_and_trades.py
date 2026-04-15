@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import ClassVar
 
 from engine.datamodel.types import Fill, Order, OrderDepth, Trade
 from engine.errors import MatcherError
@@ -20,7 +21,7 @@ from engine.errors import MatcherError
 class DepthAndTradesMatcher:
     """Book-first matcher that falls back to market-trade prints for residual size."""
 
-    name: str = "depth_and_trades"
+    name: ClassVar[str] = "depth_and_trades"
 
     def match(
         self,

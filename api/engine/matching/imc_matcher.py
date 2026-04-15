@@ -21,13 +21,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
+from typing import ClassVar
 
 from engine.datamodel.types import Fill, Order, OrderDepth, Trade
 from engine.errors import MatcherError
 
 
-class TradeMatchingMode(str, Enum):
+class TradeMatchingMode(StrEnum):
     ALL = "all"
     WORSE = "worse"
     NONE = "none"
@@ -35,8 +36,8 @@ class TradeMatchingMode(str, Enum):
 
 @dataclass(frozen=True, slots=True)
 class ImcMatcher:
+    name: ClassVar[str] = "imc"
     mode: TradeMatchingMode = TradeMatchingMode.ALL
-    name: str = "imc"
 
     def match(
         self,

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 
@@ -25,7 +25,7 @@ from engine.market.loader import MarketData, ProductSnap
 
 @dataclass(frozen=True, slots=True)
 class BlockBootstrapGenerator:
-    name: str = "block_bootstrap"
+    name: ClassVar[str] = "block_bootstrap"
     default_block_size: int = 50
 
     def generate(

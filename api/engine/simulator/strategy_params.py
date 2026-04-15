@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import ast
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -114,15 +115,20 @@ def apply_params_to_module(module: object, params: dict[str, object]) -> None:
             setattr(cls, key, _coerce_like(value, current))
 
 
-def _iter_class_assignments(stmt: ast.stmt):
+def _iter_class_assignments(
+    stmt: ast.stmt,
+) -> Iterator[tuple[str, ast.expr]]:
     """Yield (name, value) pairs for every simple class-body assignment."""
     if isinstance(stmt, ast.Assign):
         for target in stmt.targets:
             if isinstance(target, ast.Name):
                 yield target.id, stmt.value
-    elif isinstance(stmt, ast.AnnAssign):
-        if isinstance(stmt.target, ast.Name) and stmt.value is not None:
-            yield stmt.target.id, stmt.value
+    elif (
+        isinstance(stmt, ast.AnnAssign)
+        and isinstance(stmt.target, ast.Name)
+        and stmt.value is not None
+    ):
+        yield stmt.target.id, stmt.value
 
 
 def _constant_number(value: ast.expr) -> int | float | None:
@@ -180,7 +186,7 @@ def _coerce_like(value: object, reference: object) -> object:
         return bool(value)
     if isinstance(reference, int) and not isinstance(value, bool):
         try:
-            return int(value)  # type: ignore[arg-type]
+            return int(value)  # type: ignore[call-overload]
         except (TypeError, ValueError):
             return value
     if isinstance(reference, float):

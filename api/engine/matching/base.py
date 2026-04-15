@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Protocol
+from typing import ClassVar, Protocol
 
 from engine.datamodel.types import Fill, Order, OrderDepth, Trade
 
@@ -18,7 +18,7 @@ class Matcher(Protocol):
     Implementations that only walk the book (e.g. DepthOnlyMatcher) ignore it.
     """
 
-    name: str
+    name: ClassVar[str]
 
     def match(
         self,

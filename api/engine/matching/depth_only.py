@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import ClassVar
 
 from engine.datamodel.types import Fill, Order, OrderDepth, Trade
 from engine.errors import MatcherError
@@ -13,7 +14,7 @@ from engine.errors import MatcherError
 class DepthOnlyMatcher:
     """Walks the opposing side of the book in price priority, emits fills until no cross."""
 
-    name: str = "depth_only"
+    name: ClassVar[str] = "depth_only"
 
     def match(
         self,

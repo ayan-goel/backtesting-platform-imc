@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
+from engine.errors import ProsperityError
 from server.deps import get_app_settings, get_db
 from server.schemas.runs import RunCreateRequest
 from server.services import run_service
@@ -45,6 +46,8 @@ async def create_run(
         raise HTTPException(status_code=404, detail=str(e)) from e
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+    except ProsperityError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

@@ -19,7 +19,8 @@ _CONFIG_PATH = Path(__file__).resolve().parent / "rounds.json"
 def _load_raw() -> dict[str, dict[str, int]]:
     if not _CONFIG_PATH.is_file():
         return {}
-    return json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
+    data: dict[str, dict[str, int]] = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
+    return data
 
 
 def load_round_limits(round_num: int) -> dict[str, int]:

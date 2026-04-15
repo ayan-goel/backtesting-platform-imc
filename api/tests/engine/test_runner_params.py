@@ -13,7 +13,7 @@ from engine.market.loader import MarketData, load_round_day
 from engine.matching.depth_only import DepthOnlyMatcher
 from engine.simulator.runner import RunConfig, simulate_day
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 DATA_ROOT = REPO_ROOT / "tutorial-round-data"
 
 

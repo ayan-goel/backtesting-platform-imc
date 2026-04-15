@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-TUTORIAL = Path(__file__).resolve().parents[4] / "tutorial-round-data"
+TUTORIAL = Path(__file__).resolve().parents[3] / "tutorial-round-data"
 
 
 def _tutorial_files(round_num: int, day: int) -> list[tuple[str, tuple[str, bytes, str]]]:

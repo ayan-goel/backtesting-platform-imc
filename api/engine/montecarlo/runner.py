@@ -240,7 +240,8 @@ def downsample_curve(curve: np.ndarray, n: int = 256) -> np.ndarray:
         return np.full(n, float(curve[0]), dtype=np.float32)
     x_src = np.linspace(0.0, 1.0, curve.size)
     x_dst = np.linspace(0.0, 1.0, n)
-    return np.interp(x_dst, x_src, curve).astype(np.float32)
+    resampled: np.ndarray = np.interp(x_dst, x_src, curve).astype(np.float32)
+    return resampled
 
 
 def _max_drawdown(curve: np.ndarray) -> float:

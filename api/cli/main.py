@@ -323,7 +323,7 @@ def _poll_until_terminal(
         if r.status_code != 200:
             console.print(f"[red]GET {path} failed[/red]: {r.status_code} {r.text}")
             raise typer.Exit(code=2)
-        doc = r.json()
+        doc: dict[str, Any] = r.json()
         status = doc.get("status")
         if status in terminal:
             return doc

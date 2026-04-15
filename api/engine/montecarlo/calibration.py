@@ -12,6 +12,7 @@ produce zero-variance estimates rather than raising.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -152,10 +153,10 @@ def _calibrate_product(md: MarketData, product: str) -> ProductCalibration:
 
 
 def _top_levels(
-    levels: dict[int, int] | object, *, descending: bool
+    levels: Mapping[int, int], *, descending: bool
 ) -> list[int]:
     """Return absolute volumes at the top 3 levels, padded with 0."""
-    items = list(dict(levels).items())  # type: ignore[arg-type]
+    items: list[tuple[int, int]] = list(levels.items())
     items.sort(key=lambda pv: pv[0], reverse=descending)
     vols = [abs(int(v)) for _, v in items[:3]]
     while len(vols) < 3:

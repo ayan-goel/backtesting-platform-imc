@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 
@@ -19,7 +19,7 @@ from engine.market.loader import MarketData
 
 @dataclass(frozen=True, slots=True)
 class IdentityGenerator:
-    name: str = "identity"
+    name: ClassVar[str] = "identity"
 
     def generate(
         self,

@@ -25,7 +25,7 @@ from engine.simulator.strategy_loader import hash_strategy_file, load_trader
 
 # Repo-relative paths. Parents[4] from this test file lands at the repo root
 # (imc-prosperity-4/), one level above platform/.
-REPO_ROOT = Path(__file__).resolve().parents[4]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 STRATEGY_PATH = REPO_ROOT / "strategies" / "uploaded" / "120866" / "120866.py"
 ROUND1_DATA = REPO_ROOT.parent / "ROUND1"  # sibling of imc-prosperity-4/
 

@@ -10,7 +10,7 @@ from engine.errors import InvalidMarketDataError
 from engine.market.loader import load_round_day
 from engine.market.snapshot import build_trading_state
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 DATA_ROOT = REPO_ROOT / "tutorial-round-data"
 
 

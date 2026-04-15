@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 
@@ -25,7 +25,7 @@ from engine.montecarlo.generators._book_synth import synthesize_snap
 
 @dataclass(frozen=True, slots=True)
 class OuGenerator:
-    name: str = "ou"
+    name: ClassVar[str] = "ou"
 
     def generate(
         self,

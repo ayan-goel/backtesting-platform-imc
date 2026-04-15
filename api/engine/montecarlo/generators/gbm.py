@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 
@@ -24,7 +24,7 @@ from engine.montecarlo.generators._book_synth import synthesize_snap
 
 @dataclass(frozen=True, slots=True)
 class GbmGenerator:
-    name: str = "gbm"
+    name: ClassVar[str] = "gbm"
 
     def generate(
         self,

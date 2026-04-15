@@ -13,7 +13,7 @@ from engine.matching.depth_only import DepthOnlyMatcher
 from engine.simulator.runner import RunConfig, simulate_day
 from engine.simulator.strategy_loader import hash_strategy_file, load_trader
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 DATA_ROOT = REPO_ROOT / "tutorial-round-data"
 
 MINIMAL_TRADER = b"""

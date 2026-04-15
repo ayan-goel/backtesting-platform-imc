@@ -10,6 +10,7 @@ import secrets
 from datetime import UTC, datetime
 from typing import Any
 
+from engine.errors import StrategyLoadError
 from server.schemas.mc import McCreateRequest
 from server.services import dataset_service, strategy_service
 from server.services.run_service import (
@@ -53,11 +54,10 @@ async def create_mc_simulation(
             "upload it via POST /datasets first."
         )
 
-    strategy_path = strategy_service.resolve_strategy_path(settings, strategy_doc)
-    if not strategy_path.is_file():
-        raise StrategyNotFoundError(
-            f"strategy file missing on disk for {req.strategy_id!r}: {strategy_path}"
-        )
+    try:
+        strategy_service.ensure_strategy_on_disk(settings, strategy_doc)
+    except StrategyLoadError as e:
+        raise StrategyNotFoundError(str(e)) from e
 
     mc_id = _build_mc_id(strategy_doc["stem"], req.round, req.day, req.n_paths)
 

@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from engine.config.rounds import resolve_limits
+from engine.errors import StrategyLoadError
 from engine.market.loader import load_round_day
 from engine.matching.factory import resolve_matcher
 from engine.simulator.runner import RunConfig, simulate_day
@@ -57,12 +58,10 @@ async def execute_run(
             "upload it via POST /datasets first."
         )
 
-    strategy_path = strategy_service.resolve_strategy_path(settings, strategy_doc)
-    if not strategy_path.is_file():
-        # Mongo doc present but file missing — storage drift. Refuse rather than hide it.
-        raise StrategyNotFoundError(
-            f"strategy file missing on disk for {req.strategy_id!r}: {strategy_path}"
-        )
+    try:
+        strategy_path = strategy_service.ensure_strategy_on_disk(settings, strategy_doc)
+    except StrategyLoadError as e:
+        raise StrategyNotFoundError(str(e)) from e
     strategy_hash: str = strategy_doc["sha256"]
 
     # Study trials bypass the idempotency short-circuit: every trial must

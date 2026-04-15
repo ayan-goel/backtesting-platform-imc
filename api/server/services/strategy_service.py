@@ -74,6 +74,11 @@ async def upload_strategy(
         "uploaded_at": datetime.now(UTC).isoformat(),
         "size_bytes": len(content),
         "storage_subpath": f"{STRATEGIES_SUBDIR}/{storage_path.name}",
+        # Persist the raw bytes so strategies survive ephemeral-filesystem
+        # restarts (Heroku/Railway-style deploys wipe /app/storage on every
+        # boot). ensure_strategy_on_disk rehydrates from this when the file
+        # is missing at read time.
+        "source_bytes": content,
     }
     await registry.upsert_strategy(db, doc)
     return doc
@@ -147,3 +152,35 @@ def resolve_strategy_path(settings: Settings, doc: dict[str, Any]) -> Path:
     """Return the absolute filesystem path to the uploaded strategy file."""
     subpath: str = doc["storage_subpath"]
     return (settings.storage_root / subpath).resolve()
+
+
+def ensure_strategy_on_disk(settings: Settings, doc: dict[str, Any]) -> Path:
+    """Return the absolute path to the strategy file, rehydrating from Mongo
+    if the file was wiped (e.g. Heroku ephemeral filesystem).
+
+    Raises StrategyLoadError if the file is missing *and* the Mongo doc
+    doesn't carry a `source_bytes` field (i.e. an old pre-backfill record).
+    """
+    path = resolve_strategy_path(settings, doc)
+    if path.is_file():
+        return path
+
+    source = doc.get("source_bytes")
+    if source is None:
+        raise StrategyLoadError(
+            f"strategy file missing on disk and no cached source bytes: {path}. "
+            "Re-upload the strategy via POST /strategies."
+        )
+
+    content: bytes
+    if isinstance(source, bytes | bytearray | memoryview):
+        content = bytes(source)
+    else:
+        raise StrategyLoadError(
+            f"cached source_bytes on strategy doc has unsupported type "
+            f"{type(source).__name__}; re-upload the strategy"
+        )
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    return path

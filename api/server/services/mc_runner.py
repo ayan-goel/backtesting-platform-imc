@@ -127,9 +127,10 @@ async def _execute_mc(
     if strategy_doc is None:
         await _fail_mc(db, mc_id, f"strategy {doc['strategy_id']!r} missing")
         return
-    strategy_path = strategy_service.resolve_strategy_path(settings, strategy_doc)
-    if not strategy_path.is_file():
-        await _fail_mc(db, mc_id, f"strategy file missing: {strategy_path}")
+    try:
+        strategy_path = strategy_service.ensure_strategy_on_disk(settings, strategy_doc)
+    except Exception as e:
+        await _fail_mc(db, mc_id, f"strategy rehydrate failed: {e}")
         return
 
     dataset = await dataset_service.get_dataset(

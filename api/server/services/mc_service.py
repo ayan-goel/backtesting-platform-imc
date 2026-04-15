@@ -6,6 +6,7 @@ Creates a queued mc_simulations doc; the background runner in
 
 from __future__ import annotations
 
+import secrets
 from datetime import UTC, datetime
 from typing import Any
 
@@ -25,7 +26,8 @@ class McBusyError(Exception):
 
 def _build_mc_id(stem: str, round_num: int, day: int, n_paths: int) -> str:
     ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    return f"{ts}__{stem}__r{round_num}d{day}__mc{n_paths}"
+    suffix = secrets.token_hex(3)
+    return f"{ts}__{stem}__r{round_num}d{day}__mc{n_paths}__{suffix}"
 
 
 async def create_mc_simulation(

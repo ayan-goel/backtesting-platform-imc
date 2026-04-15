@@ -22,11 +22,19 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import threading
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import structlog
+
+# Guards load_trader against concurrent sys.modules mutation. The loader
+# temporarily registers synthetic "strategies" / "strategies.datamodel"
+# entries while importing — two threads racing that setup can end up
+# with one thread's registrations visible to the other's import.
+_STRATEGY_LOAD_LOCK = threading.Lock()
 
 from engine.market.loader import MarketData, load_round_day
 from engine.matching.factory import resolve_matcher
@@ -163,83 +171,132 @@ async def _execute_mc(
 
     mc_artifacts.ensure_mc_dir(settings.storage_root, mc_id)
 
-    path_results: list[PathResult] = []
+    num_workers = max(1, int(doc.get("num_workers") or 1))
+    sem = asyncio.Semaphore(num_workers)
+    path_results: list[PathResult | None] = [None] * doc["n_paths"]
 
-    for index in range(doc["n_paths"]):
-        if await _is_cancelled(db, mc_id):
-            log.info("mc cancelled before finishing", mc_id=mc_id, at=index)
-            return
+    async def _run_one(index: int) -> None:
+        async with sem:
+            if state.stopping.is_set() or await _is_cancelled(db, mc_id):
+                return
+            await registry.increment_mc_progress(db, mc_id=mc_id, running=1)
+            try:
+                result = await asyncio.to_thread(
+                    _execute_path_blocking,
+                    index=index,
+                    strategy_path=strategy_path,
+                    strategy_doc=strategy_doc,
+                    historical=historical,
+                    generator=generator,
+                    calibration=calibration,
+                    generator_params=generator_params,
+                    seed=int(doc["seed"]),
+                    matcher_name=doc["matcher"],
+                    matcher_mode=doc.get("trade_matching_mode", "all"),
+                    position_limits_map=position_limits_map,
+                    params=doc.get("params") or {},
+                    round_num=doc["round"],
+                    day=doc["day"],
+                    mc_id=mc_id,
+                )
+            except Exception as e:
+                log.exception("mc path failed", mc_id=mc_id, index=index, err=str(e))
+                await registry.update_mc_path(
+                    db,
+                    mc_id=mc_id,
+                    index=index,
+                    updates={"status": "failed", "error": f"{type(e).__name__}: {e}"},
+                )
+                await registry.increment_mc_progress(
+                    db, mc_id=mc_id, failed=1, running=-1
+                )
+                return
 
-        await registry.increment_mc_progress(db, mc_id=mc_id, running=1)
-
-        try:
-            rng = rng_for_path(run_seed=doc["seed"], path_index=index)
-            synthetic = build_synthetic_market_data(
-                historical=historical,
-                generator=generator,
-                calibration=calibration,
-                params=generator_params,
-                rng=rng,
+            mc_artifacts.write_path_curve(
+                settings.storage_root, mc_id, index, result.pnl_curve
             )
-            trader = load_trader(strategy_path)
-            run_cfg = RunConfig(
-                run_id=f"{mc_id}__path{index}",
-                strategy_path=strategy_doc["filename"],
-                strategy_hash=strategy_doc["sha256"],
-                round=doc["round"],
-                day=doc["day"],
-                matcher_name=doc["matcher"],
-                position_limits=position_limits_map,
-                output_dir=mc_artifacts.mc_dir(settings.storage_root, mc_id),
-                params=doc.get("params") or {},
-            )
-            matcher = resolve_matcher(doc["matcher"], doc.get("trade_matching_mode", "all"))
-            result = run_mc_path(
-                trader=trader,
-                market_data=synthetic,
-                matcher=matcher,
-                config=run_cfg,
-            )
-        except Exception as e:
-            log.exception("mc path failed", mc_id=mc_id, index=index, err=str(e))
             await registry.update_mc_path(
                 db,
                 mc_id=mc_id,
                 index=index,
-                updates={"status": "failed", "error": f"{type(e).__name__}: {e}"},
+                updates={
+                    "status": "succeeded",
+                    "pnl_total": result.metrics.pnl_total,
+                    "pnl_by_product": result.metrics.pnl_by_product,
+                    "max_drawdown": result.metrics.max_drawdown,
+                    "max_inventory_by_product": result.metrics.max_inventory_by_product,
+                    "turnover_by_product": result.metrics.turnover_by_product,
+                    "num_fills": result.metrics.num_fills,
+                    "sharpe_intraday": result.metrics.sharpe_intraday,
+                    "duration_ms": result.metrics.duration_ms,
+                    "error": None,
+                },
             )
             await registry.increment_mc_progress(
-                db, mc_id=mc_id, failed=1, running=-1
+                db, mc_id=mc_id, completed=1, running=-1
             )
-            continue
+            path_results[index] = result
 
-        mc_artifacts.write_path_curve(
-            settings.storage_root, mc_id, index, result.pnl_curve
-        )
-        await registry.update_mc_path(
-            db,
-            mc_id=mc_id,
-            index=index,
-            updates={
-                "status": "succeeded",
-                "pnl_total": result.metrics.pnl_total,
-                "pnl_by_product": result.metrics.pnl_by_product,
-                "max_drawdown": result.metrics.max_drawdown,
-                "max_inventory_by_product": result.metrics.max_inventory_by_product,
-                "turnover_by_product": result.metrics.turnover_by_product,
-                "num_fills": result.metrics.num_fills,
-                "sharpe_intraday": result.metrics.sharpe_intraday,
-                "duration_ms": result.metrics.duration_ms,
-                "error": None,
-            },
-        )
-        await registry.increment_mc_progress(
-            db, mc_id=mc_id, completed=1, running=-1
-        )
-        path_results.append(result)
+    await asyncio.gather(*(_run_one(i) for i in range(doc["n_paths"])))
 
-    # Aggregation happens in T5. For T1 just finalize status based on progress.
-    await _finalize(db, mc_id, settings=settings, path_results=path_results)
+    if await _is_cancelled(db, mc_id):
+        log.info("mc cancelled during run", mc_id=mc_id)
+        return
+
+    completed_results = [r for r in path_results if r is not None]
+    await _finalize(db, mc_id, settings=settings, path_results=completed_results)
+
+
+def _execute_path_blocking(
+    *,
+    index: int,
+    strategy_path: Any,
+    strategy_doc: dict[str, Any],
+    historical: MarketData,
+    generator: Any,
+    calibration: Any,
+    generator_params: dict[str, Any],
+    seed: int,
+    matcher_name: str,
+    matcher_mode: str,
+    position_limits_map: dict[str, int],
+    params: dict[str, Any],
+    round_num: int,
+    day: int,
+    mc_id: str,
+) -> PathResult:
+    """Synchronously execute one MC path. Designed to run in a worker thread."""
+    rng = rng_for_path(run_seed=seed, path_index=index)
+    synthetic = build_synthetic_market_data(
+        historical=historical,
+        generator=generator,
+        calibration=calibration,
+        params=generator_params,
+        rng=rng,
+    )
+    # load_trader mutates sys.modules while importing — serialize that step.
+    with _STRATEGY_LOAD_LOCK:
+        trader = load_trader(strategy_path)
+    run_cfg = RunConfig(
+        run_id=f"{mc_id}__path{index}",
+        strategy_path=strategy_doc["filename"],
+        strategy_hash=strategy_doc["sha256"],
+        round=round_num,
+        day=day,
+        matcher_name=matcher_name,
+        position_limits=position_limits_map,
+        # simulate_day_mc never writes to output_dir; RunConfig just requires a Path.
+        output_dir=Path("/tmp/mc-unused"),
+        params=params,
+    )
+    matcher = resolve_matcher(matcher_name, matcher_mode)
+    return run_mc_path(
+        index=index,
+        trader=trader,
+        market_data=synthetic,
+        matcher=matcher,
+        config=run_cfg,
+    )
 
 
 async def _fail_mc(db: Any, mc_id: str, reason: str) -> None:

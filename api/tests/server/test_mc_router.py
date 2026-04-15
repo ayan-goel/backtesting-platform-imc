@@ -250,6 +250,81 @@ async def test_mc_identity_runs_end_to_end(
 
 @pytest.mark.parametrize("mc_strategy", [GREEDY_TRADER], indirect=True)
 @pytest.mark.asyncio
+async def test_mc_writes_path_curves_to_disk(
+    test_app: FastAPI,
+    mc_worker_state: mc_runner.McWorkersState,
+    mc_dataset: dict,
+    mc_strategy: dict,
+    tmp_path: Path,
+) -> None:
+    from server.services.mc_path_runner import DOWNSAMPLE_N
+    from server.storage import mc_artifacts
+
+    db = test_app.state.mongo_db
+    settings = get_settings()
+    doc = await mc_service.create_mc_simulation(
+        req=McCreateRequest(
+            strategy_id=mc_strategy["_id"],
+            round=0,
+            day=0,
+            n_paths=2,
+            seed=7,
+            generator={"type": "block_bootstrap", "block_size": 10},
+        ),
+        settings=settings,
+        db=db,
+    )
+    mc_runner.signal_new_mc_work(mc_worker_state)
+    final = await _wait_until(
+        lambda d: d.get("status") in {"succeeded", "failed"}, db, doc["_id"]
+    )
+    assert final["status"] == "succeeded", final
+
+    for idx in range(2):
+        curve = mc_artifacts.read_path_curve(settings.storage_root, doc["_id"], idx)
+        assert curve is not None
+        assert curve.shape == (DOWNSAMPLE_N,)
+        assert curve.dtype.name == "float32"
+
+
+@pytest.mark.parametrize("mc_strategy", [GREEDY_TRADER], indirect=True)
+@pytest.mark.asyncio
+async def test_mc_path_curve_endpoint_returns_json(
+    client: TestClient,
+    auth_headers: dict,
+    test_app: FastAPI,
+    mc_worker_state: mc_runner.McWorkersState,
+    mc_dataset: dict,
+    mc_strategy: dict,
+) -> None:
+    from server.services.mc_path_runner import DOWNSAMPLE_N
+
+    db = test_app.state.mongo_db
+    settings = get_settings()
+    doc = await mc_service.create_mc_simulation(
+        req=McCreateRequest(
+            strategy_id=mc_strategy["_id"],
+            round=0,
+            day=0,
+            n_paths=1,
+            seed=1,
+        ),
+        settings=settings,
+        db=db,
+    )
+    mc_runner.signal_new_mc_work(mc_worker_state)
+    await _wait_until(
+        lambda d: d.get("status") in {"succeeded", "failed"}, db, doc["_id"]
+    )
+    r = client.get(f"/mc/{doc['_id']}/paths/0/curve", headers=auth_headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["index"] == 0
+    assert len(body["curve"]) == DOWNSAMPLE_N
+
+
+@pytest.mark.parametrize("mc_strategy", [GREEDY_TRADER], indirect=True)
+@pytest.mark.asyncio
 async def test_mc_identity_path_pnl_equals_direct(
     test_app: FastAPI,
     mc_worker_state: mc_runner.McWorkersState,

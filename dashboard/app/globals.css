@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* base surfaces + text */
+  --bg: 0 0% 6%;
+  --fg: 0 0% 96%;
+  --muted: 0 0% 12%;
+  --muted-fg: 0 0% 60%;
+  --border: 0 0% 18%;
+  --border-strong: 0 0% 24%;
+  --surface-1: 0 0% 8%;
+  --surface-2: 0 0% 10%;
+
+  /* brand */
+  --accent: 210 90% 56%;
+  --accent-fg: 0 0% 100%;
+
+  /* data */
+  --buy: 142 70% 45%;
+  --sell: 0 72% 55%;
+
+  /* state */
+  --warn: 38 92% 55%;
+  --info: 200 80% 58%;
+
+  /* focus ring */
+  --ring: 210 90% 62%;
+}
+
+html,
+body {
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+/* Focus ring fallback — every focusable primitive opts in via
+   focus-visible:ring-2 ring-ring ring-offset-2 ring-offset-bg. */
+:focus-visible {
+  outline: none;
+}
+
+/* Bigger thumb + flatter track on the replay scrubber so it's actually
+   grabbable and the track doesn't look like a seek bar from 2005. */
+input[type="range"].replay-scrubber {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: grab;
+}
+input[type="range"].replay-scrubber:active {
+  cursor: grabbing;
+}
+input[type="range"].replay-scrubber::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+}
+input[type="range"].replay-scrubber::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+}
+input[type="range"].replay-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border-radius: 9999px;
+  background: hsl(var(--accent));
+  border: 2px solid hsl(var(--bg));
+  box-shadow: 0 0 0 1px hsl(var(--accent));
+  transition: transform 80ms ease;
+}
+input[type="range"].replay-scrubber:active::-webkit-slider-thumb,
+input[type="range"].replay-scrubber:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+input[type="range"].replay-scrubber::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: hsl(var(--accent));
+  border: 2px solid hsl(var(--bg));
+  box-shadow: 0 0 0 1px hsl(var(--accent));
+  transition: transform 80ms ease;
+}
+input[type="range"].replay-scrubber:active::-moz-range-thumb,
+input[type="range"].replay-scrubber:focus-visible::-moz-range-thumb {
+  transform: scale(1.15);
+}

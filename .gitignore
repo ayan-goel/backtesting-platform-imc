@@ -1,0 +1,105 @@
+# ---------- OS / editor ----------
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# ---------- Claude / local agent config ----------
+.claude/
+CLAUDE.local.md
+
+# ---------- Secrets / env ----------
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# ---------- Logs ----------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---------- Python (api) ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+wheels/
+*.manifest
+*.spec
+
+# Virtualenvs
+.venv/
+venv/
+env/
+ENV/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.dmypy.json
+dmypy.json
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+.cache/
+nosetests.xml
+
+# Notebooks
+.ipynb_checkpoints/
+
+# uv / pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Runtime artifacts (anchored to api/)
+api/storage/
+
+# ---------- Node / Next.js (dashboard) ----------
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Build output
+.next/
+out/
+dist/
+build/
+.vercel/
+.turbo/
+.swc/
+
+# TS incremental build
+*.tsbuildinfo
+next-env.d.ts.backup
+
+# Test / coverage
+coverage/
+.nyc_output/
+.vitest-cache/
+
+# ---------- Misc ----------
+tmp/
+temp/
+*.pid
+*.seed
+*.pid.lock

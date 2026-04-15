@@ -1,0 +1,20 @@
+# Local platform-only ignores. Root .gitignore is intentionally minimal.
+.venv/
+.env
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+*.egg-info/
+# Anchored: only match the runtime-artifact dir at `platform/api/storage/`.
+# Do NOT match the `server/storage/` Python package — unanchored `storage/` does.
+/storage/
+prosperity.egg-info/
+
+# Node / dashboard
+node_modules/
+.next/
+.vercel/

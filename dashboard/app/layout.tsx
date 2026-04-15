@@ -24,6 +24,7 @@ const NAV_LINKS = [
   { href: "/", label: "runs" },
   { href: "/batches", label: "batches" },
   { href: "/studies", label: "studies" },
+  { href: "/mc", label: "monte carlo" },
   { href: "/compare", label: "compare" },
   { href: "/strategies", label: "strategies" },
   { href: "/datasets", label: "datasets" },

@@ -13,11 +13,16 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from server.auth import require_api_key
 from server.deps import get_db
-from server.routers import batches, datasets, runs, strategies, studies
+from server.routers import batches, datasets, mc, runs, strategies, studies
 from server.services.batch_runner import (
     recover_orphaned_tasks,
     start_workers,
     stop_workers,
+)
+from server.services.mc_runner import (
+    recover_orphaned_mc,
+    start_mc_worker,
+    stop_mc_worker,
 )
 from server.services.study_runner import StudyRunnerState
 from server.services.study_runner import stop_all as stop_studies
@@ -35,6 +40,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.mongo_db = db
     await ensure_indexes(db)
     await recover_orphaned_tasks(db)
+    await recover_orphaned_mc(db)
     workers = await start_workers(db=db, settings=settings)
     app.state.batch_workers = workers
     study_runner_state = StudyRunnerState()
@@ -42,9 +48,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await resume_running_studies(
         db=db, settings=settings, runner_state=study_runner_state
     )
+    mc_state = await start_mc_worker(db=db, settings=settings)
+    app.state.mc_worker = mc_state
     try:
         yield
     finally:
+        await stop_mc_worker(mc_state)
         await stop_studies(study_runner_state)
         await stop_workers(workers)
         client.close()
@@ -74,3 +83,4 @@ app.include_router(datasets.router, dependencies=[Depends(require_api_key)])
 app.include_router(strategies.router, dependencies=[Depends(require_api_key)])
 app.include_router(batches.router, dependencies=[Depends(require_api_key)])
 app.include_router(studies.router, dependencies=[Depends(require_api_key)])
+app.include_router(mc.router, dependencies=[Depends(require_api_key)])

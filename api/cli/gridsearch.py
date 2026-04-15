@@ -141,7 +141,7 @@ def gridsearch(
                 i, params = futures[fut]
                 try:
                     row = fut.result()
-                except Exception as e:  # noqa: BLE001 - we want any trial crash logged
+                except Exception as e:
                     row = {
                         "trial": i,
                         "params": params,

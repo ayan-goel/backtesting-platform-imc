@@ -75,7 +75,7 @@ class _BookState:
 class _PoolEntry:
     """Mutable MarketTrade analogue — independent buy/sell remaining counters."""
 
-    __slots__ = ("price", "buy_remaining", "sell_remaining")
+    __slots__ = ("buy_remaining", "price", "sell_remaining")
 
     def __init__(self, price: int, quantity: int) -> None:
         self.price = price

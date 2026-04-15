@@ -128,6 +128,108 @@ export interface StudyTrialSummary {
   duration_ms: number | null;
 }
 
+// ---- Monte Carlo ------------------------------------------------------------
+
+export type McGeneratorSpec =
+  | { type: "identity" }
+  | { type: "block_bootstrap"; block_size: number }
+  | {
+      type: "gbm";
+      mu_scale: number;
+      sigma_scale: number;
+      starting_price_from: "historical_first" | "historical_last";
+    }
+  | { type: "ou"; phi_scale: number; sigma_scale: number };
+
+export interface McPathSummary {
+  index: number;
+  status: "queued" | "running" | "succeeded" | "failed";
+  pnl_total: number | null;
+  pnl_by_product: Record<string, number> | null;
+  max_drawdown: number | null;
+  max_inventory_by_product: Record<string, number> | null;
+  turnover_by_product: Record<string, number> | null;
+  num_fills: number | null;
+  sharpe_intraday: number | null;
+  duration_ms: number | null;
+  error: string | null;
+}
+
+export interface McProgress {
+  total: number;
+  completed: number;
+  failed: number;
+  running: number;
+}
+
+export interface PnlQuantiles {
+  p01: number;
+  p05: number;
+  p10: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p90: number;
+  p95: number;
+  p99: number;
+}
+
+export interface PnlHistogram {
+  bin_edges: number[];
+  counts: number[];
+}
+
+export interface PnlCurveQuantiles {
+  ts_grid: number[];
+  p05: number[];
+  p25: number[];
+  p50: number[];
+  p75: number[];
+  p95: number[];
+}
+
+export interface McAggregateStats {
+  pnl_mean: number;
+  pnl_std: number;
+  pnl_median: number;
+  pnl_min: number;
+  pnl_max: number;
+  pnl_quantiles: PnlQuantiles;
+  winrate: number;
+  sharpe_across_paths: number;
+  max_drawdown_mean: number;
+  max_drawdown_p05: number;
+  num_fills_mean: number;
+  pnl_histogram: PnlHistogram;
+  pnl_curve_quantiles: PnlCurveQuantiles | null;
+}
+
+export interface McSimulation {
+  _id: string;
+  created_at: string;
+  strategy_id: string;
+  strategy_hash: string;
+  strategy_filename: string;
+  round: number;
+  day: number;
+  matcher: string;
+  trade_matching_mode: string;
+  position_limit: number;
+  params: Record<string, unknown>;
+  generator: McGeneratorSpec;
+  n_paths: number;
+  seed: number;
+  num_workers: number;
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+  started_at: string | null;
+  finished_at: string | null;
+  progress: McProgress;
+  paths: McPathSummary[];
+  aggregate: McAggregateStats | null;
+  reference_run_id: string | null;
+  error: string | null;
+}
+
 export interface EventRecord {
   run_id: string;
   ts: number;

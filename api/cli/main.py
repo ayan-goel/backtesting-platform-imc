@@ -7,7 +7,7 @@ import time
 from datetime import UTC, datetime
 from importlib.metadata import version as pkg_version
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 import typer
@@ -223,7 +223,7 @@ def batch(
     ),
     matcher: str = typer.Option("depth_only", "--matcher"),
     position_limit: int = typer.Option(50, "--limit"),
-    config: Optional[Path] = typer.Option(
+    config: Path | None = typer.Option(
         None,
         "--config",
         help="Optional JSON file with {strategy_id, datasets: [{round, day}], matcher, position_limit, params}.",

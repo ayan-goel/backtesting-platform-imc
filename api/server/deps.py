@@ -36,3 +36,9 @@ def get_study_runner(request: Request) -> Any:
     """Return the study runner state. None when not bootstrapped
     (e.g. tests that don't start studies)."""
     return getattr(request.app.state, "study_runner", None)
+
+
+def get_mc_worker(request: Request) -> Any:
+    """Return the MC worker state. None when not bootstrapped
+    (e.g. tests that don't start the MC worker)."""
+    return getattr(request.app.state, "mc_worker", None)

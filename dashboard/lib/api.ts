@@ -5,6 +5,7 @@ import type {
   Batch,
   Dataset,
   EventRecord,
+  McSimulation,
   RunSummary,
   Strategy,
   Study,
@@ -99,6 +100,32 @@ export async function listStudyTrials(studyId: string): Promise<StudyTrialSummar
   );
   if (!res.ok) throw new Error(`listStudyTrials failed: ${res.status}`);
   return (await res.json()) as StudyTrialSummary[];
+}
+
+export async function listMcSimulations(
+  skip = 0,
+  limit = 200
+): Promise<McSimulation[]> {
+  const res = await apiFetch(`/mc?skip=${skip}&limit=${limit}`);
+  if (!res.ok) throw new Error(`listMcSimulations failed: ${res.status}`);
+  return (await res.json()) as McSimulation[];
+}
+
+export async function getMcSimulation(mcId: string): Promise<McSimulation> {
+  const res = await apiFetch(`/mc/${encodeURIComponent(mcId)}`);
+  if (!res.ok) throw new Error(`getMcSimulation failed: ${res.status}`);
+  return (await res.json()) as McSimulation;
+}
+
+export async function getMcPathCurve(
+  mcId: string,
+  index: number
+): Promise<{ index: number; curve: number[] }> {
+  const res = await apiFetch(
+    `/mc/${encodeURIComponent(mcId)}/paths/${index}/curve`
+  );
+  if (!res.ok) throw new Error(`getMcPathCurve failed: ${res.status}`);
+  return (await res.json()) as { index: number; curve: number[] };
 }
 
 export async function proxyToApi(

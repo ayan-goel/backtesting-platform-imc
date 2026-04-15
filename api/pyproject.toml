@@ -18,6 +18,7 @@ dependencies = [
     "jsonpickle>=3.2",
     "python-multipart>=0.0.9",
     "optuna>=3.6",
+    "numpy>=2.0",
 ]
 
 [project.scripts]

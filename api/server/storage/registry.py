@@ -10,6 +10,7 @@ DATASETS_COLLECTION = "datasets"
 STRATEGIES_COLLECTION = "strategies"
 BATCHES_COLLECTION = "batches"
 STUDIES_COLLECTION = "studies"
+MC_COLLECTION = "mc_simulations"
 
 
 async def ensure_indexes(db: Any) -> None:
@@ -34,6 +35,11 @@ async def ensure_indexes(db: Any) -> None:
     studies = db[STUDIES_COLLECTION]
     await studies.create_index([("created_at", -1)])
     await studies.create_index([("status", 1)])
+
+    mc = db[MC_COLLECTION]
+    await mc.create_index([("created_at", -1)])
+    await mc.create_index([("status", 1)])
+    await mc.create_index([("strategy_id", 1)])
 
 
 async def insert_run(db: Any, doc: dict[str, Any]) -> None:
@@ -396,6 +402,109 @@ async def increment_study_progress(
         return 0
     result = await db[STUDIES_COLLECTION].update_one({"_id": study_id}, {"$inc": inc})
     return int(result.modified_count)
+
+
+# ---- mc simulations ---------------------------------------------------------
+
+
+async def insert_mc(db: Any, doc: dict[str, Any]) -> None:
+    await db[MC_COLLECTION].insert_one(doc)
+
+
+async def get_mc(db: Any, mc_id: str) -> dict[str, Any] | None:
+    result: dict[str, Any] | None = await db[MC_COLLECTION].find_one({"_id": mc_id})
+    return result
+
+
+async def list_mc(
+    db: Any, *, skip: int = 0, limit: int = 50
+) -> list[dict[str, Any]]:
+    cursor = db[MC_COLLECTION].find().sort("created_at", -1).skip(skip).limit(limit)
+    return [doc async for doc in cursor]
+
+
+async def delete_mc(db: Any, mc_id: str) -> int:
+    result = await db[MC_COLLECTION].delete_one({"_id": mc_id})
+    return int(result.deleted_count)
+
+
+async def mark_mc_status(
+    db: Any,
+    *,
+    mc_id: str,
+    status: str,
+    started_at: str | None = None,
+    finished_at: str | None = None,
+    error: str | None = None,
+) -> int:
+    updates: dict[str, Any] = {"status": status}
+    if started_at is not None:
+        updates["started_at"] = started_at
+    if finished_at is not None:
+        updates["finished_at"] = finished_at
+    if error is not None:
+        updates["error"] = error
+    result = await db[MC_COLLECTION].update_one({"_id": mc_id}, {"$set": updates})
+    return int(result.modified_count)
+
+
+async def update_mc_path(
+    db: Any,
+    *,
+    mc_id: str,
+    index: int,
+    updates: dict[str, Any],
+) -> int:
+    set_doc = {f"paths.$.{k}": v for k, v in updates.items()}
+    result = await db[MC_COLLECTION].update_one(
+        {"_id": mc_id, "paths": {"$elemMatch": {"index": index}}},
+        {"$set": set_doc},
+    )
+    return int(result.modified_count)
+
+
+async def increment_mc_progress(
+    db: Any,
+    *,
+    mc_id: str,
+    completed: int = 0,
+    failed: int = 0,
+    running: int = 0,
+) -> int:
+    inc: dict[str, int] = {}
+    if completed:
+        inc["progress.completed"] = completed
+    if failed:
+        inc["progress.failed"] = failed
+    if running:
+        inc["progress.running"] = running
+    if not inc:
+        return 0
+    result = await db[MC_COLLECTION].update_one({"_id": mc_id}, {"$inc": inc})
+    return int(result.modified_count)
+
+
+async def set_mc_aggregate(
+    db: Any, *, mc_id: str, aggregate: dict[str, Any]
+) -> int:
+    result = await db[MC_COLLECTION].update_one(
+        {"_id": mc_id}, {"$set": {"aggregate": aggregate}}
+    )
+    return int(result.modified_count)
+
+
+async def find_mc_by_strategy(
+    db: Any, *, strategy_id: str
+) -> list[dict[str, Any]]:
+    cursor = db[MC_COLLECTION].find({"strategy_id": strategy_id})
+    return [doc async for doc in cursor]
+
+
+async def find_mc_by_dataset(
+    db: Any, *, round_num: int, day: int
+) -> list[dict[str, Any]]:
+    cursor = db[MC_COLLECTION].find({"round": round_num, "day": day})
+    return [doc async for doc in cursor]
 
 
 async def update_study_best(

@@ -37,7 +37,7 @@ export function RunCreateForm({ strategies, datasets }: Props) {
 
   const [strategyId, setStrategyId] = useState<string>(sortedStrategies[0]?._id ?? "");
   const [datasetId, setDatasetId] = useState<string>(sortedDatasets[0]?._id ?? "");
-  const [matcher] = useState<string>("depth_only");
+  const [matcher, setMatcher] = useState<string>("imc");
   const [positionLimit, setPositionLimit] = useState<string>("50");
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -131,9 +131,15 @@ export function RunCreateForm({ strategies, datasets }: Props) {
 
           <div className="grid gap-3 md:grid-cols-2">
             <Field label="matcher">
-              <div className="flex h-8 items-center rounded-control border border-border bg-surface-2 px-2.5 font-mono text-sm text-muted-fg">
-                depth_only
-              </div>
+              <Select
+                mono
+                value={matcher}
+                onChange={(e) => setMatcher(e.target.value)}
+              >
+                <option value="imc">imc (parity w/ prosperity4btx)</option>
+                <option value="depth_and_trades">depth_and_trades</option>
+                <option value="depth_only">depth_only</option>
+              </Select>
             </Field>
             <Field label="position limit">
               <Input

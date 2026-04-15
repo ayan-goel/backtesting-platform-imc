@@ -64,6 +64,7 @@ export function StudyCreateForm({ strategies, datasets }: Props) {
   const [datasetKey, setDatasetKey] = useState<string>(
     sortedDatasets[0]?._id ?? ""
   );
+  const [matcher, setMatcher] = useState<string>("imc");
   const [positionLimit, setPositionLimit] = useState<string>("50");
   const [nTrials, setNTrials] = useState<string>("30");
   const [direction, setDirection] = useState<"maximize" | "minimize">("maximize");
@@ -171,7 +172,7 @@ export function StudyCreateForm({ strategies, datasets }: Props) {
           strategy_id: strategyId,
           round: selectedDataset.round,
           day: selectedDataset.day,
-          matcher: "depth_only",
+          matcher,
           position_limit: Number(positionLimit),
           space,
           objective,
@@ -240,9 +241,15 @@ export function StudyCreateForm({ strategies, datasets }: Props) {
 
           <div className="grid gap-3 md:grid-cols-3">
             <Field label="matcher">
-              <div className="flex h-8 items-center rounded-control border border-border bg-surface-2 px-2.5 font-mono text-sm text-muted-fg">
-                depth_only
-              </div>
+              <Select
+                mono
+                value={matcher}
+                onChange={(e) => setMatcher(e.target.value)}
+              >
+                <option value="imc">imc (parity w/ prosperity4btx)</option>
+                <option value="depth_and_trades">depth_and_trades</option>
+                <option value="depth_only">depth_only</option>
+              </Select>
             </Field>
             <Field label="position limit">
               <Input

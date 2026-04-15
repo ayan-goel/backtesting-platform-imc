@@ -23,7 +23,6 @@ export class ReplayErrorBoundary extends Component<
 
   componentDidCatch(error: Error, info: unknown): void {
     // Surface in the browser console for debugging.
-    // eslint-disable-next-line no-console
     console.error("ReplayErrorBoundary caught", error, info);
   }
 

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export interface LabelProps extends React.ComponentPropsWithoutRef<"label"> {}
+export type LabelProps = React.ComponentPropsWithoutRef<"label">;
 
 export const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
   function Label({ className, children, ...rest }, ref) {

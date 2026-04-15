@@ -38,7 +38,7 @@ export function BatchCreateForm({ strategies, datasets }: Props) {
   const [strategyId, setStrategyId] = useState<string>(sortedStrategies[0]?._id ?? "");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [matcher, setMatcher] = useState<string>("imc");
-  const [positionLimit, setPositionLimit] = useState<string>("50");
+  const [positionLimit, setPositionLimit] = useState<string>("80");
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState<string | null>(null);
 

@@ -65,7 +65,7 @@ export function StudyCreateForm({ strategies, datasets }: Props) {
     sortedDatasets[0]?._id ?? ""
   );
   const [matcher, setMatcher] = useState<string>("imc");
-  const [positionLimit, setPositionLimit] = useState<string>("50");
+  const [positionLimit, setPositionLimit] = useState<string>("80");
   const [nTrials, setNTrials] = useState<string>("30");
   const [direction, setDirection] = useState<"maximize" | "minimize">("maximize");
   const [objective, setObjective] = useState<string>("pnl_total");

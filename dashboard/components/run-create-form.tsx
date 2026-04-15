@@ -38,7 +38,7 @@ export function RunCreateForm({ strategies, datasets }: Props) {
   const [strategyId, setStrategyId] = useState<string>(sortedStrategies[0]?._id ?? "");
   const [datasetId, setDatasetId] = useState<string>(sortedDatasets[0]?._id ?? "");
   const [matcher, setMatcher] = useState<string>("imc");
-  const [positionLimit, setPositionLimit] = useState<string>("50");
+  const [positionLimit, setPositionLimit] = useState<string>("80");
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState<string | null>(null);
 
